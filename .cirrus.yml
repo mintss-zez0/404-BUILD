@@ -1,0 +1,26 @@
+task:
+  name: Build
+  persistent_worker: {}
+  env:
+    USE_CCACHE: 1
+    CIRRUS_WORKING_DIR: /tmp/$CIRRUS_REPO_NAME
+  clone_script:
+    - mkdir p-404 && cd p-404 || true
+    - repo init -u https://github.com/P-404/android_manifest -b umai || true
+  sync_script:
+    - rm -rf .repo/local_manifests || true
+    - git clone https://github.com/mintss-zez0/local_manifest.git --depth 1 -b main .repo/local_manifests
+    - repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+  build_script:
+    - source build/envsetup.sh
+    - lunch p404_sky-userdebug
+    - make bacon
+  ccache_stats_script:
+    - ccache -s
+  upload_script: |
+    up() {
+      curl --upload-file $1 https://transfer.sh/$(basename $1); echo
+      # 14 days, 10 GB limit
+    }
+
+    up out/target/product/sky/*.zip
